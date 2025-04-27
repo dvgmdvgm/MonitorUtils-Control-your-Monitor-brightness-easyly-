@@ -1,0 +1,17 @@
+{
+  "linkSliders": true,
+  "autostartBrightness": 75,
+  "monitorBrightness": {
+    "0": 50,
+    "1": 50
+  },
+  "useTimedSettings": true,
+  "timedBrightness": {
+    "00:00": 25,
+    "04:00": 50,
+    "08:00": 75,
+    "12:00": 100,
+    "16:00": 75,
+    "20:00": 50
+  }
+}
