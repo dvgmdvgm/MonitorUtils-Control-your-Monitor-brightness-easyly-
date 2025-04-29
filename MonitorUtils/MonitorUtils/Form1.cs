@@ -1,9 +1,9 @@
-﻿using Microsoft.Win32;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.Linq;
+using System.Management;
 using System.Runtime.InteropServices;
-using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using static MonitorManager;
@@ -33,7 +33,7 @@ namespace MonitorUtils
 
         AppConfig config;
         private List<string> monitorNames = new List<string>();
-        public List<MonitorManager.MonitorInfo> monitors = new List<MonitorManager.MonitorInfo>();
+        public List<MonitorInfo> monitors = new List<MonitorManager.MonitorInfo>();
         public List<MonitorControl> monitorControls = new List<MonitorControl>();
         DateTimeController dt;
         private Color PrimaryColor;
@@ -48,6 +48,24 @@ namespace MonitorUtils
 
         [DllImport("UXTheme.dll", SetLastError = true, EntryPoint = "#138")]
         public static extern bool ShouldSystemUseDarkMode();
+
+        [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+        static extern bool EnumDisplayDevices(string lpDevice, uint iDevNum, ref DISPLAY_DEVICE lpDisplayDevice, uint dwFlags);
+
+        [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+        public struct DISPLAY_DEVICE
+        {
+            public int cb;
+            [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 32)]
+            public string DeviceName;
+            [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 128)]
+            public string DeviceString;
+            public int StateFlags;
+            [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 128)]
+            public string DeviceID;
+            [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 128)]
+            public string DeviceKey;
+        }
 
         public Form1()
         {
@@ -134,7 +152,7 @@ namespace MonitorUtils
 
                 var control = new MonitorControl(
                     monitor,
-                    name + $" ({i + 1})",
+                    name,
                     PrimaryColor,
                     TrackColor,
                     ThumbHoverColor,
@@ -175,6 +193,7 @@ namespace MonitorUtils
                     (int)monitor.Max : config.GetMonitorBrightness(i) < (int)monitor.Min ?
                     (int)monitor.Min : config.GetMonitorBrightness(i));
                 }
+                TrayManager.GetInstance.UpdateTooltip();
             }
 
             loadedMonitors = monitors.Count;
@@ -211,7 +230,7 @@ namespace MonitorUtils
             monitorNames.Clear();
             monitors.Clear();
             this.Controls.Clear();
-            monitorNames = await GetMonitorNamesAsync();
+            monitorNames = await GetMonitorNamesFromEDID();
             monitors = await GetMonitorsAsync();
 
             await LoadMonitors();
@@ -239,6 +258,7 @@ namespace MonitorUtils
                 }
                 catch (Exception ex) { await PrepareFormAsync(); }
             }
+            TrayManager.GetInstance.UpdateTooltip();
             this.Hide();
         }
 
@@ -328,47 +348,29 @@ namespace MonitorUtils
         }
 
 
-        public async Task<List<string>> GetMonitorNamesAsync()
+        public async Task<List<string>> GetMonitorNamesFromEDID()
         {
-            return await Task.Run(() =>
+            var names = new List<string>();
+            var searcher = new ManagementObjectSearcher(@"ROOT\WMI", "SELECT * FROM WmiMonitorID");
+            int index = 0;
+
+            foreach (ManagementObject obj in searcher.Get())
             {
-                var names = new List<string>();
-                string registryPath = @"SYSTEM\CurrentControlSet\Enum\DISPLAY";
+                index++;
+                string name = GetString(obj["UserFriendlyName"]);
+                if (!string.IsNullOrWhiteSpace(name))
+                    names.Add(name + $" ({index})");
+            }
+            return names;
+        }
 
-                using (var displayKey = Registry.LocalMachine.OpenSubKey(registryPath))
-                {
-                    if (displayKey != null)
-                    {
-                        foreach (string monitor in displayKey.GetSubKeyNames())
-                        {
-                            using (var monitorKey = displayKey.OpenSubKey(monitor))
-                            {
-                                foreach (string instance in monitorKey.GetSubKeyNames())
-                                {
-                                    if (instance != null && !instance.EndsWith("UID0"))
-                                    {
-                                        using (var monitorSets = monitorKey.OpenSubKey(instance))
-                                        {
-                                            try
-                                            {
-                                                var friendlyNameObj = monitorSets.GetValue("FriendlyName");
-                                                if (friendlyNameObj != null)
-                                                {
-                                                    var match = Regex.Match(friendlyNameObj.ToString(), @"\(([^)]+)\)[^()]*$");
-                                                    if (match.Success) names.Add(match.Groups[1].Value);
-                                                }
-                                            }
-                                            catch { /* Ignore errors */ }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-
-                return names;
-            });
+        private string GetString(object value)
+        {
+            if (value is ushort[] chars)
+            {
+                return new string(chars.Select(c => (char)c).ToArray()).TrimEnd('\0');
+            }
+            return string.Empty;
         }
 
         private async Task StartBackgroundLoopAsync()
@@ -382,6 +384,7 @@ namespace MonitorUtils
                         try
                         {
                             mc.SetBrightnessSilent(dt.GetBrightnessForCurrentTime());
+                            TrayManager.GetInstance.UpdateTooltip();
                         }
                         catch { }
                     }

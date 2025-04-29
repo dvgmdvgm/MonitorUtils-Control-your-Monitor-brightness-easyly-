@@ -2,8 +2,8 @@
   "linkSliders": true,
   "autostartBrightness": 75,
   "monitorBrightness": {
-    "0": 75,
-    "1": 75
+    "0": 100,
+    "1": 100
   },
   "useTimedSettings": true,
   "timedBrightness": {

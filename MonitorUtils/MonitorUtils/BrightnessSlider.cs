@@ -2,7 +2,6 @@
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Windows.Forms;
-using static MonitorManager;
 
 namespace MonitorUtils
 {
@@ -21,7 +20,6 @@ namespace MonitorUtils
         private Color _textColor;
         private readonly bool _isDarkTheme;
         AppConfig config;
-        DateTimeController dt;
 
         public event Action<int> ValueChanged;
 
@@ -40,7 +38,7 @@ namespace MonitorUtils
         public Color ThumbHoverColor
         {
             get => _thumbHoverColor;
-            set { _thumbHoverColor = value; Redraw(); }
+            set { _thumbHoverColor = value; Redraw(); } 
         }
 
         public Color TextColor
@@ -162,6 +160,7 @@ namespace MonitorUtils
             base.OnMouseLeave(e);
             _hover = false;
             Redraw();
+            TrayManager.GetInstance.UpdateTooltip();
         }
 
         protected override void OnPaint(PaintEventArgs e)

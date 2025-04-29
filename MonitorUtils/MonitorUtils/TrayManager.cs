@@ -73,15 +73,13 @@ namespace MonitorUtils
         private const uint TrayIconId = 1;
 
         private readonly Form1 mainForm;
-        private readonly IntPtr hIcon;
+        private readonly IntPtr hIcon = Icon.ExtractAssociatedIcon(Application.ExecutablePath).Handle;
 
         public TrayManager()
         {
             mainForm = Form1.GetInstance;
 
             CreateHandle(new CreateParams());
-
-            hIcon = Icon.ExtractAssociatedIcon(Application.ExecutablePath).Handle; // или кастомную иконку
 
             var data = new NOTIFYICONDATA
             {
@@ -91,11 +89,30 @@ namespace MonitorUtils
                 uFlags = NIF_MESSAGE | NIF_ICON | NIF_TIP,
                 uCallbackMessage = WM_TRAYMESSAGE,
                 hIcon = hIcon,
-                szTip = "Яркость монитора"
+                szTip = "Яркость монитора: " + MonitorManager.GetMonitors()[0].Current
             };
 
             Shell_NotifyIcon(NIM_ADD, ref data);
             //ShowFormAboveTray(); // Показать форму при запуске программы....
+        }
+
+        public void UpdateTooltip()
+        {
+            var monitors = MonitorManager.GetMonitors();
+            string tipText = monitors.Count > 0
+                ? "Яркость монитора " + monitors[0].Current
+                : "Монитор не найден";
+
+            var data = new NOTIFYICONDATA
+            {
+                cbSize = (uint)Marshal.SizeOf(typeof(NOTIFYICONDATA)),
+                hWnd = Handle,
+                uID = TrayIconId,
+                uFlags = NIF_TIP,
+                szTip = tipText
+            };
+
+            Shell_NotifyIcon(NIM_MODIFY, ref data);
         }
 
         protected override void WndProc(ref Message m)
@@ -105,7 +122,7 @@ namespace MonitorUtils
                 int mouseMsg = m.LParam.ToInt32();
                 if (mouseMsg == 0x0202) // WM_LBUTTONUP
                 {
-                    ShowFormAboveTray();
+                    _=ShowFormAboveTray();
                 }
                 else if (mouseMsg == 0x0204) // WM_RBUTTONUP
                 {

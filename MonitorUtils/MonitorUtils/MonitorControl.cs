@@ -91,7 +91,7 @@ namespace MonitorUtils
                 Left = 5,
                 Top = 20,
                 Width = 268,
-                Height = 50,
+                Height = 56,
                 PrimaryColor = primaryColor,
                 TrackColor = trackColor,
                 ThumbHoverColor = thumbHoverColor,
@@ -124,7 +124,6 @@ namespace MonitorUtils
                 pendingBrightness = value;
                 brightnessTimer.Stop();
                 brightnessTimer.Start(); // перезапускаем с нуля
-
                 BrightnessChanged?.Invoke(value); // уведомим остальных
             };
 
