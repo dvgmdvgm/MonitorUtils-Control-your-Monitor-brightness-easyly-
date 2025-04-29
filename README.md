@@ -2,7 +2,8 @@
 
 **MonitorUtils** is a lightweight, portable Windows application for adjusting your monitor’s brightness easily — without any installation, no system modifications, and no traces left behind.
 
-![Screen-592](https://github.com/user-attachments/assets/5d7b1972-2651-4469-b11e-f9412aac48ef)
+
+![Screen-592](https://github.com/user-attachments/assets/87c38705-c640-46d5-91d0-b558527f47d1)
 
 
 
